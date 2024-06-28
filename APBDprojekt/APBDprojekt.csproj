@@ -8,6 +8,8 @@
 
     <ItemGroup>
         <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.6" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.6" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.4"/>
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.0-preview.5.24306.3" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0-preview.5.24306.3">
@@ -15,8 +17,58 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="9.0.0-preview.5.24306.3" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
         <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0"/>
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <_ContentIncludedByDefault Remove="TestAPBDProject\obj\project.assets.json" />
+      <_ContentIncludedByDefault Remove="TestAPBDProject\obj\project.packagespec.json" />
+      <_ContentIncludedByDefault Remove="TestAPBDProject\obj\TestAPBDProject.csproj.nuget.dgspec.json" />
+      <_ContentIncludedByDefault Remove="AuthServiceTests\obj\AuthServiceTests.csproj.nuget.dgspec.json" />
+      <_ContentIncludedByDefault Remove="AuthServiceTests\obj\project.assets.json" />
+      <_ContentIncludedByDefault Remove="AuthServiceTests\obj\project.packagespec.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\APBDprojekt.deps.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\APBDprojekt.runtimeconfig.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\appsettings.Development.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\appsettings.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\MvcTestingAppManifest.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\TestProject1.deps.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\TestProject1.runtimeconfig.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\TestProject1\obj\project.assets.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\TestProject1\obj\project.packagespec.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\bin\Debug\net8.0\TestProject1\obj\TestProject1.csproj.nuget.dgspec.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\obj\Debug\net8.0\MvcTestingAppManifest.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\obj\project.assets.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\obj\project.packagespec.json" />
+      <_ContentIncludedByDefault Remove="TestProject1\obj\TestProject1.csproj.nuget.dgspec.json" />
+      <_ContentIncludedByDefault Remove="APBDproject.tests\bin\Debug\net8.0\APBDproject.tests.deps.json" />
+      <_ContentIncludedByDefault Remove="APBDproject.tests\bin\Debug\net8.0\APBDproject.tests.runtimeconfig.json" />
+      <_ContentIncludedByDefault Remove="APBDproject.tests\obj\APBDproject.tests.csproj.nuget.dgspec.json" />
+      <_ContentIncludedByDefault Remove="APBDproject.tests\obj\project.assets.json" />
+      <_ContentIncludedByDefault Remove="APBDproject.tests\obj\project.packagespec.json" />
+      <_ContentIncludedByDefault Remove="APBDprojekt.Tests\bin\Debug\net8.0\APBDprojekt.Tests.deps.json" />
+      <_ContentIncludedByDefault Remove="APBDprojekt.Tests\bin\Debug\net8.0\APBDprojekt.Tests.runtimeconfig.json" />
+      <_ContentIncludedByDefault Remove="APBDprojekt.Tests\obj\APBDprojekt.Tests.csproj.nuget.dgspec.json" />
+      <_ContentIncludedByDefault Remove="APBDprojekt.Tests\obj\project.assets.json" />
+      <_ContentIncludedByDefault Remove="APBDprojekt.Tests\obj\project.packagespec.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Remove="APBDprojekt.Tests\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Remove="APBDprojekt.Tests\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Remove="APBDprojekt.Tests\**" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Remove="APBDprojekt.Tests\**" />
     </ItemGroup>
 
 </Project>

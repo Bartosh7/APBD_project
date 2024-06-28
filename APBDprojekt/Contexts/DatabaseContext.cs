@@ -14,6 +14,8 @@ public class DatabaseContext : DbContext
    
     public DbSet<Software> Softwares { get; set; }
     public DbSet<Subscription> Subscriptions { get; set; }
+    public DbSet<AppUserModel> Users { get; set; }
+    public DbSet<LogTokenModel> RefreshTokens { get; set; }
     
     
     protected DatabaseContext()

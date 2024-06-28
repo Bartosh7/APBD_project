@@ -1,12 +1,16 @@
 using System.Net.Sockets;
+using System.Text;
 using APBDprojekt.Contexts;
 using APBDprojekt.Exceptions;
 using APBDprojekt.RequestModels;
 using APBDprojekt.Servces;
 using APBDprojekt.Validators;
 using FluentValidation;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +21,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IClientService, ClientService>();
 builder.Services.AddScoped<IContractService, ContractService>();
 builder.Services.AddScoped<IContractPaymentService, ContractPaymentService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddValidatorsFromAssemblyContaining<PostClientCompanyValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<PostClientPersonValidator>();
 builder.Services.AddValidatorsFromAssemblyContaining<PutClientPersonValidator>();
@@ -29,18 +34,135 @@ builder.Services.AddDbContext<DatabaseContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("Default"));
 });
 
-builder.Services.AddHttpClient(); //todo check
+// Dodaj usługi do kontenera DI
+builder.Services.AddControllers();
+
+
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { 
+        Title = "My API", 
+        Version = "v1" 
+    });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme {
+        In = ParameterLocation.Header, 
+        Description = "Please insert JWT with Bearer into field",
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey 
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+        { 
+            new OpenApiSecurityScheme 
+            { 
+                Reference = new OpenApiReference 
+                { 
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer" 
+                } 
+            },
+            new string[] { } 
+        } 
+    });
+});
+
+
+// Konfiguracja JWT
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"]!))
+        };
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPolicy", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("UserPolicy", policy => policy.RequireRole("User", "Admin"));
+});
+
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+app.UseHttpsRedirection();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapPost("/api/login", async (RegisterAndLoginRequestModel model, IAuthService authService,  IValidator<RegisterAndLoginRequestModel> validator) =>
+{
+    var validate = await validator.ValidateAsync(model);
+    if (!validate.IsValid)
+    {
+        return Results.ValidationProblem(validate.ToDictionary());
+    }
+
+    var result = await authService.LoginAsync(model);
+    if (result == null)
+    {
+        return Results.Unauthorized();
+    }
+    return Results.Ok(result);
+});
+
+app.MapPost("/api/register/user", async (RegisterAndLoginRequestModel model, IAuthService authService, IValidator<RegisterAndLoginRequestModel> validator) =>
+{
+    var validate = await validator.ValidateAsync(model);
+    if (!validate.IsValid)
+    {
+        return Results.ValidationProblem(validate.ToDictionary());
+    }
+
+    var result = await authService.RegisterUserAsync(model, "User");
+    if (!result)
+    {
+        return Results.BadRequest("User already exists.");
+    }
+    return Results.Ok("User registered successfully.");
+});
+
+
+
+app.MapPost("/api/register/admin", async (RegisterAndLoginRequestModel model, IAuthService authService, IValidator<RegisterAndLoginRequestModel> validator) =>
+{
+    var validate = await validator.ValidateAsync(model);
+    if (!validate.IsValid)
+    {
+        return Results.ValidationProblem(validate.ToDictionary());
+    }
+
+    var result = await authService.RegisterUserAsync(model, "Admin");
+    if (!result)
+    {
+        return Results.BadRequest("User already exists.");
+    }
+    return Results.Ok("User registered successfully.");
+});
+
+app.MapPost("/api/refresh-token", async (string refreshToken, IAuthService authService) =>
+{
+    var result = await authService.RefreshTokenAsync(refreshToken);
+    if (result == null)
+    {
+        return Results.Unauthorized();
+    }
+    return Results.Ok(result);
+});
 
 app.MapPost("api/clientPerson",
     async (PostClientPersonRequestModel data, IClientService service,
@@ -55,7 +177,7 @@ app.MapPost("api/clientPerson",
         await service.PostClientPerson(data);
 
         return Results.Created();
-    });
+    }).RequireAuthorization("UserPolicy"); // Dodanie autoryzacji
 
 app.MapPost("api/clientCompany",
     async (PostClientCompanyRequestModel data, IClientService service,
@@ -70,21 +192,21 @@ app.MapPost("api/clientCompany",
         await service.PostClientCompany(data);
 
         return Results.Created();
-    });
+    }).RequireAuthorization("UserPolicy"); // Dodanie autoryzacji
 
 app.MapDelete("api/clientPerson/{id:int}", async (IClientService service, int id) =>
+{
+    try
     {
-        try
-        {
-            await service.DeleteClientPerson(id);
-            return Results.NoContent();
-        }
-        catch (NotFoundException e)
-        {
-            return Results.NotFound(e.Message);
-        }
+        await service.DeleteClientPerson(id);
+        return Results.NoContent();
     }
-);
+    catch (NotFoundException e)
+    {
+        return Results.NotFound(e.Message);
+    }
+}).RequireAuthorization("AdminPolicy"); // Dodanie autoryzacji
+
 app.MapPut("api/clientPerson/{id:int}", async (PutClientPersonRequestModel data, IClientService service,
     IValidator<PutClientPersonRequestModel> validator, int id) =>
 {
@@ -103,7 +225,7 @@ app.MapPut("api/clientPerson/{id:int}", async (PutClientPersonRequestModel data,
     {
         return Results.NotFound(e.Message);
     }
-});
+}).RequireAuthorization("AdminPolicy"); // Dodanie autoryzacji
 
 app.MapPut("api/clientCompany/{id:int}", async (PutClientCompanyRequestModel data, IClientService service,
     IValidator<PutClientCompanyRequestModel> validator, int id) =>
@@ -123,7 +245,7 @@ app.MapPut("api/clientCompany/{id:int}", async (PutClientCompanyRequestModel dat
     {
         return Results.NotFound(e.Message);
     }
-});
+}).RequireAuthorization("AdminPolicy"); // Dodanie autoryzacji
 
 app.MapPost("api/contracts/client/{idClient:int}/software/{idSoftware:int}", async (PostContractModelRequestModel data,
     IContractService service, IValidator<PostContractModelRequestModel> validator, int idClient, int idSoftware) =>
@@ -148,7 +270,7 @@ app.MapPost("api/contracts/client/{idClient:int}/software/{idSoftware:int}", asy
     {
         return Results.BadRequest(e.Message);
     }
-});
+}).RequireAuthorization("UserPolicy"); // Dodanie autoryzacji
 
 app.MapPost("api/contractPayment/client/{idClient:int}/contract/{idContract:int}", async (
     PostContractPaymentRequestModel data,
@@ -163,7 +285,7 @@ app.MapPost("api/contractPayment/client/{idClient:int}/contract/{idContract:int}
 
     try
     {
-        var result = await service.PutContractPayment(data, idClient, idContract);
+        var result = await service.PostContractPayment(data, idClient, idContract);
 
         return Results.Created($"/{result}", result);
     }
@@ -179,7 +301,7 @@ app.MapPost("api/contractPayment/client/{idClient:int}/contract/{idContract:int}
     {
         return Results.BadRequest(e.Message);
     }
-});
+}).RequireAuthorization("UserPolicy"); // Dodanie autoryzacji
 
 app.MapGet("api/profit/{currency}", async (string currency,
     IContractPaymentService service) =>
@@ -193,10 +315,7 @@ app.MapGet("api/profit/{currency}", async (string currency,
     {
         return Results.NotFound(e.Message);;
     }
-    
-    
-    
-});
+}).RequireAuthorization("UserPolicy"); // Dodanie autoryzacji
 
 app.MapGet("api/profit/{currency}/software/{softwareId:int}", async (string currency, int softwareId,
     IContractPaymentService service) =>
@@ -210,13 +329,6 @@ app.MapGet("api/profit/{currency}/software/{softwareId:int}", async (string curr
     {
         return Results.NotFound(e.Message);;
     }
-    
-    
-    
-});
-
-
-
-
+}).RequireAuthorization("UserPolicy"); // Dodanie autoryzacji
 
 app.Run();

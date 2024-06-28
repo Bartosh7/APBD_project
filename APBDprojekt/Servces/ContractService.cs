@@ -10,6 +10,7 @@ namespace APBDprojekt.Servces;
 public interface IContractService
 {
     Task<PostContractModelResponseModel> PostContract(PostContractModelRequestModel data, int idClient, int idSoftware);
+    Task<decimal> CalculateDiscount(int idSoftware, string type);
 }
 
 public class ContractService(DatabaseContext context) : IContractService
@@ -74,7 +75,7 @@ public class ContractService(DatabaseContext context) : IContractService
         return response;
     }
 
-    private async Task<decimal> CalculateDiscount(int idSoftware, string type)
+    public async Task<decimal> CalculateDiscount(int idSoftware, string type)
     {
         var discountsList = await context.Discounts
             .Where(e => e.SoftwareId == idSoftware && e.DateFrom <= DateTime.Now && e.DateTo >= DateTime.Now && e.Type==type)

@@ -10,7 +10,7 @@ namespace APBDprojekt.Servces;
 
 public interface IContractPaymentService
 {
-    Task<PostContractPaymentResponseModel> PutContractPayment(PostContractPaymentRequestModel data, int idClient,
+    Task<PostContractPaymentResponseModel> PostContractPayment(PostContractPaymentRequestModel data, int idClient,
         int idContract);
 
     Task<GetProfitResponseModel> GetProfitFromAllProducts(string currency);
@@ -20,7 +20,7 @@ public interface IContractPaymentService
 
 public class ContractPaymentService(DatabaseContext context, HttpClient httpClient) : IContractPaymentService
 {
-    public async Task<PostContractPaymentResponseModel> PutContractPayment(PostContractPaymentRequestModel data,
+    public async Task<PostContractPaymentResponseModel> PostContractPayment(PostContractPaymentRequestModel data,
         int idClient, int idContract)
     {
         var client = await context.Clients.Where(e => e.ClientId == idClient).FirstOrDefaultAsync();
